@@ -1,0 +1,57 @@
+project:
+  name: "student-performance-ml"
+  version: "0.1.0"
+
+data:
+  raw_data_path: "artifacts/data/raw_students.csv"
+  train_data_path: "artifacts/data/train_students.csv"
+  test_data_path: "artifacts/data/test_students.csv"
+  test_size: 0.2
+  random_state: 42
+  synthetic_rows: 1000
+
+features:
+  target_column: "math_score"
+  numerical_columns: ["reading_score", "writing_score"]
+  categorical_columns:
+    - "gender"
+    - "race_ethnicity"
+    - "parental_level_of_education"
+    - "lunch"
+    - "test_preparation_course"
+  categories:
+    gender: ["female", "male"]
+    race_ethnicity: ["group A", "group B", "group C", "group D", "group E"]
+    parental_level_of_education:
+      - "some high school"
+      - "high school"
+      - "some college"
+      - "associate's degree"
+      - "bachelor's degree"
+      - "master's degree"
+    lunch: ["free/reduced", "standard"]
+    test_preparation_course: ["none", "completed"]
+  column_aliases:
+    lunch_type: "lunch"
+    race/ethnicity: "race_ethnicity"
+    parental level of education: "parental_level_of_education"
+    test preparation course: "test_preparation_course"
+    math score: "math_score"
+    reading score: "reading_score"
+    writing score: "writing_score"
+
+model:
+  artifacts_dir: "artifacts/models"
+  preprocessor_filename: "preprocessor.joblib"
+  model_filename: "model.joblib"
+  metadata_filename: "metadata.json"
+  reference_stats_filename: "reference_stats.json"
+  r2_threshold: 0.75
+  subgroup_columns: ["test_preparation_course", "lunch"]
+  max_subgroup_r2_gap: 0.20
+
+monitoring:
+  window_size: 300
+  ks_alpha: 0.05
+  psi_threshold: 0.20
+  categorical_l1_threshold: 0.25
