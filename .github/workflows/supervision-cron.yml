@@ -1,0 +1,39 @@
+name: Supervision Cron
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  supervise-service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and boot supervised container
+        run: |
+          docker build -t student-supervision:latest .
+          docker run -d --name student-supervision -p 8000:8000 student-supervision:latest
+          for i in $(seq 1 25); do
+            if curl -fsS http://127.0.0.1:8000/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Verify health, predictions, and drift supervision
+        run: |
+          curl -fsS http://127.0.0.1:8000/health | tee health.json
+          for s in 55 65 75 85 92 98; do
+            curl -fsS -X POST http://127.0.0.1:8000/predict \
+              -H "Content-Type: application/json" \
+              -d "{\"gender\":\"male\",\"race_ethnicity\":\"group C\",\"parental_level_of_education\":\"some college\",\"lunch\":\"standard\",\"test_preparation_course\":\"none\",\"reading_score\":$s,\"writing_score\":$s}" > /dev/null
+          done
+          curl -fsS http://127.0.0.1:8000/monitor/drift | tee drift.json
+          python -c "import json; d=json.load(open('drift.json')); assert d['status'] in ('healthy', 'drift_detected'), d; assert 'reading_score' in d['numerical_features']"
+
+      - name: Tear down container
+        if: always()
+        run: docker rm -f student-supervision || true
